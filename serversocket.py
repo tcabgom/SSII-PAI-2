@@ -52,10 +52,7 @@ def receive_transaction(data):
     #print(f"Received transaction data: {origin_account}, {destination_account}, {amount}, {message_hash}, {nonce}")
     communication_key = keygenerator.DUMMY_SIMETRIC_KEY
     result = check_message_integrity((origin_account, destination_account, amount), communication_key, nonce, message_hash, nonce_db)
-    if result:
-        return "Transaction successful"
-    else:
-        return "Transaction failed"
+    return origin_account.to_bytes(4, byteorder='big'), destination_account.to_bytes(4, byteorder='big'), result.to_bytes(4, byteorder='big'), nonce
 
 
 def save_nonce_to_database(nonce):
@@ -135,6 +132,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             data = conn.recv(1024)
             if not data:
                 break
-            result = receive_transaction(data)
-            conn.sendall(result.encode())
-            
+            origin_account, destination_account, result, nonce = receive_transaction(data)
+            message_key = keygenerator.generate_key((origin_account, destination_account, result), keygenerator.DUMMY_SIMETRIC_KEY, nonce)
+            #conn.sendall(result.encode())
+            conn.sendall(origin_account+destination_account+result+message_key+nonce)
