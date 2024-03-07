@@ -1,16 +1,17 @@
 # serversocket.py
-import hashlib
 import datetime
 import os
 import platform
+import sqlite3
 from plyer import notification
 import socket
 import keygenerator
 import struct
+import sqlite3
 
 HOST = "127.0.0.1"
 PORT = 3030
-NONCE_DB_FILE = "nonce_database.txt"
+DB_FILE = "nonce_database.db"
 LOG = "logs/error_log.txt"
 
 
@@ -28,12 +29,19 @@ def send_notification(title, message):
         )
 
 def create_nonce_database():
-    nonce_database = set()
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
 
-    if os.path.exists(NONCE_DB_FILE):
-        with open(NONCE_DB_FILE, "r") as file:
-            for line in file:
-                nonce_database.add(line.strip())
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS nonces (
+            nonce TEXT PRIMARY KEY
+        )
+    ''')
+
+    cursor.execute('SELECT nonce FROM nonces')
+    nonce_database = set(row[0] for row in cursor.fetchall())
+
+    connection.close()
 
     return nonce_database
 
@@ -51,16 +59,25 @@ def receive_transaction(data):
 
 
 def save_nonce_to_database(nonce):
-    with open(NONCE_DB_FILE, "a") as file:
-        file.write(f"{nonce}\n")
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute('INSERT INTO nonces (nonce) VALUES (?)', (nonce,))
+    connection.commit()
+
+    connection.close()
 
 def verify_nonce(nonce, nonce_database):
-    # Verificación del nonce
-    print(f"Verifying nonce: {nonce}")
-    print(f"Nonce database: {nonce_database}")
-    if nonce not in nonce_database:
-        nonce_database.add(nonce)
-        save_nonce_to_database(nonce)  # Guardar el nuevo nonce
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute('SELECT COUNT(*) FROM nonces WHERE nonce = ?', (nonce,))
+    count = cursor.fetchone()[0]
+
+    connection.close()
+
+    if count == 0:
+        save_nonce_to_database(nonce)
         return True
     else:
         return False
@@ -111,8 +128,8 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     conn, addr = s.accept()
     with conn:
         print(f"Connected by {addr}")
-        if not os.path.exists(NONCE_DB_FILE):
-            open(NONCE_DB_FILE, 'w').close()
+        if not os.path.exists(DB_FILE):
+            open(DB_FILE, 'w').close()
 
         while True:
             data = conn.recv(1024)

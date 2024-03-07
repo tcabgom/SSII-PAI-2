@@ -10,7 +10,7 @@ HOST = "127.0.0.1"  # The server's hostname or IP address
 PORT = 3030  # The port used by the server
 
 def generate_nonce():
-    return b'\xa1\x1e\x0b\xf0\xdf\xb8uL\r%\xf3\x1c\xf4\x88\xea\x89h\r\x10\x06u\xf5zG\xd8\x07\xf8\xe57\xee-\x8b' #secrets.token_bytes(32)
+    return secrets.token_bytes(32)
 
 def ask_user_account_number():
     root = tk.Tk()
