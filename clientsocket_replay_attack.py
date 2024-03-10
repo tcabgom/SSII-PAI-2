@@ -1,5 +1,3 @@
-# clientsocket.py
-
 import platform
 import socket
 import struct
@@ -74,15 +72,21 @@ def check_response_integrity(origin_account, destination_account, accepted, rece
         pass
     
 
-def transaction_without_attack(HOST, PORT, nonce, ask_transation_data, receive_server_response, s):
+def replay_attack(HOST, PORT, nonce, ask_transation_data, receive_server_response, s):
     s.connect((HOST, PORT))
     user_input1, user_input2, user_input3 = ask_transation_data()
 
     origin_account = user_input1.to_bytes(4, byteorder='big')
     destination_account = user_input2.to_bytes(4, byteorder='big')
     amount = user_input3.to_bytes(4, byteorder='big')
+    
     message_key = keygenerator.generate_key((origin_account, destination_account, amount), keygenerator.DUMMY_SIMETRIC_KEY, nonce)
 
+    s.sendall(origin_account+destination_account+amount+message_key+nonce)
+    data = s.recv(1024)
+    receive_server_response(data)
+    
+    #Se repite el mensaje (replay attack)
     s.sendall(origin_account+destination_account+amount+message_key+nonce)
     data = s.recv(1024)
     receive_server_response(data)
@@ -90,7 +94,7 @@ def transaction_without_attack(HOST, PORT, nonce, ask_transation_data, receive_s
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     nonce = generate_nonce()
-    data = transaction_without_attack(HOST, PORT, nonce, ask_transation_data, receive_server_response, s)
+    data = replay_attack(HOST, PORT, nonce, ask_transation_data, receive_server_response, s)
 
 
 print(f"Received {data!r}")
