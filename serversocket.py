@@ -49,7 +49,7 @@ nonce_db = create_nonce_database()
 
 def receive_transaction(data):
     origin_account, destination_account, amount, message_hash, nonce = struct.unpack('>iii32s32s', data)
-    #print(f"Received transaction data: {origin_account}, {destination_account}, {amount}, {message_hash}, {nonce}")
+    print(f"Received transaction data: {origin_account}, {destination_account}, {amount}, {message_hash}, {nonce}")
     communication_key = keygenerator.DUMMY_SIMETRIC_KEY
     result = check_message_integrity((origin_account, destination_account, amount), communication_key, nonce, message_hash, nonce_db)
     return origin_account.to_bytes(4, byteorder='big'), destination_account.to_bytes(4, byteorder='big'), result.to_bytes(4, byteorder='big'), nonce
